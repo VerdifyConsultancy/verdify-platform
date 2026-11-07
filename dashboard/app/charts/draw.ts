@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 import type uPlot from "uplot";
 import type { RetentionNote } from "./retention";
-import { boundLabel, forecastRuns, type BandRun, type Bound, type ForecastLine, type StepSegment } from "./marks";
+import { boundLabel, forecastRuns, leavesBand, type BandRun, type Bound, type ForecastLine, type StepSegment } from "./marks";
 
 /**
  * Canvas painting for the hook-drawn marks (design system §5.1). Positions are canvas pixels (`valToPos(…, true)`),
@@ -197,6 +197,28 @@ export function paintBandEdges(plot: PaintTarget, runs: readonly BandRun[], colo
         ctx.stroke();
       }
     }
+  });
+}
+
+/** drawAxes: the achievable band's edges (#1433), dashed, only where they leave the band's own edges. */
+export function paintAchievableEdges(plot: PaintTarget, runs: readonly BandRun[], band: readonly BandRun[], colors: ChartColors, px: number) {
+  clipToPlot(plot, () => {
+    const { ctx } = plot;
+    ctx.strokeStyle = colors["--c-outdoor"];
+    ctx.lineWidth = 1.5 * px;
+    ctx.setLineDash([4 * px, 3 * px]);
+    for (const run of runs) {
+      for (const edge of ["low", "high"] as const) {
+        ctx.beginPath();
+        for (let index = 1; index < run.t.length; index++) {
+          if (!leavesBand(run, edge, index - 1, band) && !leavesBand(run, edge, index, band)) continue;
+          ctx.moveTo(x(plot, run.t[index - 1]), y(plot, run[edge][index - 1]));
+          ctx.lineTo(x(plot, run.t[index]), y(plot, run[edge][index]));
+        }
+        ctx.stroke();
+      }
+    }
+    ctx.setLineDash([]);
   });
 }
 

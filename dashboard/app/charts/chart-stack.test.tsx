@@ -12,7 +12,8 @@ import { ChartStack, STACK_AXIS_PX, bare, panelReadout, panelStats, seriesWords,
 import type { ChartEvent } from "./events";
 import { FakeResizeObserver, MockPlot, TOKENS, created, media, setTokens } from "./fixtures/uplot-mock";
 import { compareLine } from "./layers";
-import { buildTimeSeriesModel } from "./time-series";
+import { ACHIEVABLE } from "./marks";
+import { buildTimeSeriesModel, chartNotes } from "./time-series";
 import type { BandTimeline, MetricDef, Series } from "./types";
 
 vi.mock("uplot", async () => ({ default: (await import("./fixtures/uplot-mock")).MockPlot }));
@@ -267,6 +268,29 @@ test("the header words: bare numbers in the unit's decimals, gaps counted, the r
   expect(panelStats(model, null)).toBe("in band 100% · low 64.0 (00:00) · mean 65.0 · high 66.0 (00:00) · 1 gap");
   const compare = compareLine(series(300, { "climate.temp_avg": () => 64 }, 86_400), "climate.temp_avg", 86_400, "yesterday");
   expect(panelReadout(model, new Set(), compare, FROM + HOUR).replaceAll("\u00a0", " ")).toBe("65.0 · band 62.0–70.0 · in · yesterday 64.0");
+});
+
+test("the achievable VPD band (#1433): graded beside the band, read at the cursor where it leaves the band, keyed and noted", () => {
+  const timeline = band();
+  // Night (the first 8 h): the house is expected to reach no more than 0.45 kPa, so the floor drops there.
+  const night = (at: number) => at < FROM + 8 * HOUR;
+  const achievable = {
+    vpd_low: timeline.t.map((at) => (night(at) ? 0.45 : 0.6)), vpd_high: timeline.t.map(() => 1.2),
+    expected_low: timeline.t.map((at) => (night(at) ? 0.45 : null)), expected_high: timeline.t.map((at) => (night(at) ? 0.55 : null)),
+    days: 14, nights: [],
+  };
+  const withAchievable = { ...timeline, achievable } as unknown as BandTimeline;
+  // VPD 0.5 at night (below the band, inside the achievable band), 0.8 by day.
+  const vpd = series(300, { "climate.vpd_avg": (index) => (index < 96 ? 0.5 : 0.8) });
+  const model = buildTimeSeriesModel({ series: vpd, metrics: [VPD], band: withAchievable, now: NOW, xRange: RANGE });
+  expect(panelStats(model, null)).toMatch(/^in band 67% · achievable 100% · /);
+  expect(panelReadout(model, new Set(), null, FROM + HOUR)).toBe("0.50 · band 0.60–1.20 · below · achievable 0.45–1.20");
+  expect(panelReadout(model, new Set(), null, FROM + 12 * HOUR)).toBe("0.80 · band 0.60–1.20 · in");
+  expect(chartNotes(model)).toContain(ACHIEVABLE);
+  // Without the field (an older API, a zone, a window past 35 days) nothing changes.
+  const plain = buildTimeSeriesModel({ series: vpd, metrics: [VPD], band: timeline, now: NOW, xRange: RANGE });
+  expect(plain.achievable).toEqual([]);
+  expect(panelStats(plain, null)).toMatch(/^in band 67% · low /);
 });
 
 test("ChartGrid: one y range per row, the y axis on the first column and the time axis on the last row; readouts per cell; a data table per row", async () => {

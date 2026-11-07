@@ -11,7 +11,8 @@ API-24 stores the anchors a Save changes through the settings writer, one ``desi
 ``desired_state`` insert trigger wakes the dispatcher, whose anchor sync (``ingestor/tasks/band_anchors.py``) pushes
 the changed anchors; nothing here talks to the controller. Iris may not write the band (``read_only``).
 
-Expected night VPD (docs/research/w5/vpd-band.md §3): indoor dewpoint is fitted as ``a + b·T_in + c·T_out + e·Td_out``
+Expected (achievable) night VPD (docs/research/w5/vpd-band.md §3; the pure model is ``verdify_schemas.vpd_envelope``,
+shared with API-06's achievable band, #1433): indoor dewpoint is fitted as ``a + b·T_in + c·T_out + e·Td_out``
 on the trailing 14 days' deep-night hours (sun below -6°) with no vent, fan, fog or mister running; the ribbon is
 ``es(T_target) - es(Td_in)`` at ±0.674·RMSE of dewpoint (p25-p75), from the forecast's outdoor values, at night steps
 only. Night heat is 0.19 kW/°F × (target - outdoor) over the forecast's night hours.
@@ -26,7 +27,6 @@ from __future__ import annotations
 
 import math
 from collections.abc import Iterable, Mapping, Sequence
-from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 from typing import Any, Literal
 
@@ -56,8 +56,17 @@ from verdify_schemas.band_profile import (
     unchanged,
 )
 from verdify_schemas.band_rows import ANCHOR_KEYS, HOUSE_CROP, HOUSE_SERIES
-from verdify_schemas.experiment_regimes import saturation_vapor_pressure_kpa
-from verdify_services import activity, series, settings
+from verdify_schemas.vpd_envelope import (
+    DEEP_NIGHT_ALTITUDE_DEG,
+    ENVELOPE_DAYS,
+    MOISTURE_EQUIPMENT,
+    DewpointFit,
+    dewpoint_f,
+    es_kpa,
+    fit_dewpoint,
+)
+from verdify_schemas.vpd_envelope import expected_vpd as expected_ribbon
+from verdify_services import activity, series, settings, vpd_envelope
 from verdify_services.activity import WriteResult
 from verdify_services.actor import Actor
 from verdify_services.problems import ServiceError, problem
@@ -65,43 +74,14 @@ from verdify_services.series import BandCurve
 
 GREENHOUSE_ID = "vallery"
 NIGHT_BIAS_PARAM = "night_vpd_bias_kpa"
-ENVELOPE_DAYS = 14
-ENVELOPE_MIN_HOURS = 24
-DEEP_NIGHT_ALTITUDE_DEG = -6.0
-# Equipment that moves indoor moisture: hours with any of it on are left out of the fit.
-MOISTURE_EQUIPMENT = ("vent", "fan1", "fan2", "fog", "mister_center", "mister_south", "mister_west")
 HEAT_LOSS_KW_PER_F = 0.19  # research §3, measured
-P25_Z = 0.674  # the normal quantile of p25/p75
 ACTION = "band.write"
 TARGET = "house band"
 
 _TEMP_FIELDS = ("temp_day", "temp_night", "temp_width_day", "temp_width_night")
 _VPD_FIELDS = ("vpd_day", "vpd_night", "vpd_below_day", "vpd_above_day", "vpd_below_night", "vpd_above_night")
 
-ENVELOPE_SQL = """
-WITH s AS (
-    SELECT equipment, ts, state, lead(ts) OVER (PARTITION BY equipment ORDER BY ts) AS nts
-    FROM public.equipment_state
-    WHERE equipment = ANY($2::text[]) AND ts >= $1::timestamptz - interval '15 days' AND ts < $1::timestamptz
-), busy AS (
-    SELECT DISTINCT gs AS b
-    FROM s CROSS JOIN LATERAL generate_series(
-        date_trunc('hour', s.ts),
-        date_trunc('hour', LEAST(COALESCE(s.nts, $1::timestamptz), s.ts + interval '6 hours')),
-        interval '1 hour') AS gs
-    WHERE s.state
-), h AS (
-    SELECT time_bucket('1 hour', ts) AS b, avg(temp_avg) AS t_in, avg(dew_point) AS td_in,
-           avg(outdoor_temp_f) AS t_out, avg(outdoor_rh_pct) AS rh_out, avg(solar_altitude_deg) AS alt
-    FROM public.climate
-    WHERE greenhouse_id = $3 AND ts >= $1::timestamptz - interval '14 days' AND ts < $1::timestamptz
-    GROUP BY 1
-)
-SELECT t_in, td_in, t_out, rh_out FROM h
-WHERE alt < $4 AND t_in IS NOT NULL AND td_in IS NOT NULL AND t_out IS NOT NULL AND rh_out > 0
-  AND NOT EXISTS (SELECT 1 FROM busy WHERE busy.b = h.b)
-ORDER BY b
-"""
+ENVELOPE_SQL = vpd_envelope.ENVELOPE_RANGE_SQL
 FORECAST_SQL = series.forecast_rows_sql(["temp_f", "dew_point_f", "vpd_kpa"])
 MEASURED_WINDOW = timedelta(hours=24)
 # API-04's gap-filled raw read of the house average: a0 is temp_avg, a1 vpd_avg.
@@ -148,8 +128,10 @@ class AxisPreview(_Model):
 
 class VpdPreview(AxisPreview):
     device: BandCurve = Field(description="The draft as the controller runs it: night_vpd_bias_kpa added at night")
-    expected_low: list[float | None] = Field(description="Expected night VPD, p25; null by day or without a forecast")
-    expected_high: list[float | None] = Field(description="Expected night VPD, p75")
+    expected_low: list[float | None] = Field(
+        description="Achievable night VPD (verdify_schemas.vpd_envelope), p25; null by day or without a forecast"
+    )
+    expected_high: list[float | None] = Field(description="Achievable night VPD, p75")
 
 
 class Guardrails(_Model):
@@ -306,67 +288,6 @@ def sun_times(t: Sequence[int], phases: Sequence[float]) -> SunTimes:
     return SunTimes(**found)
 
 
-def es_kpa(temp_f: float) -> float:
-    return saturation_vapor_pressure_kpa(temp_f)
-
-
-def dewpoint_f(vapour_kpa: float) -> float:
-    """Inverse Tetens (the constants of ``saturation_vapor_pressure_kpa``)."""
-    g = math.log(max(vapour_kpa, 1e-6) / 0.6108)
-    return (237.3 * g / (17.27 - g)) * 9.0 / 5.0 + 32.0
-
-
-@dataclass(frozen=True)
-class DewpointFit:
-    coef: tuple[float, float, float, float]  # a, b (T_in), c (T_out), e (Td_out)
-    rmse_f: float
-    hours: int
-    dewpoint_p10_f: float
-
-    def predict(self, t_in: float, t_out: float, td_out: float) -> float:
-        a, b, c, e = self.coef
-        return a + b * t_in + c * t_out + e * td_out
-
-
-def _solve(matrix: list[list[float]], vector: list[float]) -> list[float] | None:
-    """Gaussian elimination with partial pivoting; None when singular."""
-    size = len(vector)
-    m = [row[:] + [vector[index]] for index, row in enumerate(matrix)]
-    for col in range(size):
-        pivot = max(range(col, size), key=lambda row: abs(m[row][col]))
-        if abs(m[pivot][col]) < 1e-9:
-            return None
-        m[col], m[pivot] = m[pivot], m[col]
-        for row in range(size):
-            if row != col:
-                factor = m[row][col] / m[col][col]
-                m[row] = [value - factor * m[col][index] for index, value in enumerate(m[row])]
-    return [m[index][size] / m[index][index] for index in range(size)]
-
-
-def fit_dewpoint(rows: Iterable[Mapping[str, Any]]) -> DewpointFit | None:
-    """Least squares of indoor dewpoint on indoor temperature, outdoor temperature and outdoor dewpoint."""
-    samples: list[tuple[list[float], float]] = []
-    for row in rows:
-        t_in, td_in, t_out, rh_out = (row[key] for key in ("t_in", "td_in", "t_out", "rh_out"))
-        if None in (t_in, td_in, t_out, rh_out):
-            continue
-        td_out = dewpoint_f(float(rh_out) / 100.0 * es_kpa(float(t_out)))
-        samples.append(([1.0, float(t_in), float(t_out), td_out], float(td_in)))
-    if len(samples) < ENVELOPE_MIN_HOURS:
-        return None
-    xtx = [[sum(x[i] * x[j] for x, _ in samples) for j in range(4)] for i in range(4)]
-    xty = [sum(x[i] * y for x, y in samples) for i in range(4)]
-    coef = _solve(xtx, xty)
-    if coef is None:
-        return None
-    residuals = [y - sum(c * v for c, v in zip(coef, x, strict=True)) for x, y in samples]
-    rmse = math.sqrt(sum(r * r for r in residuals) / len(residuals))
-    observed = sorted(y for _, y in samples)
-    p10 = observed[max(0, math.ceil(0.1 * len(observed)) - 1)]
-    return DewpointFit(tuple(coef), round(rmse, 3), len(samples), round(p10, 2))  # type: ignore[arg-type]
-
-
 def _hour_key(epoch: int) -> int:
     return epoch - epoch % 3600
 
@@ -387,12 +308,9 @@ def expected_vpd(
             low.append(None)
             high.append(None)
             continue
-        td = fit.predict(temp, *outdoor)
-        spread = P25_Z * fit.rmse_f
-        es = es_kpa(temp)
-        # A wetter dewpoint gives the lower VPD.
-        low.append(round(max(0.0, es - es_kpa(min(temp, td + spread))), 3))
-        high.append(round(max(0.0, es - es_kpa(min(temp, td - spread))), 3))
+        p25, p75 = expected_ribbon(fit, temp, *outdoor)
+        low.append(p25)
+        high.append(p75)
     return low, high
 
 
@@ -443,11 +361,37 @@ def dewpoint_warning(anchors: Mapping[str, float], fit: DewpointFit | None) -> P
     )
 
 
-def all_findings(anchors: Mapping[str, float], fit: DewpointFit | None) -> list[ProfileFinding]:
+def floor_warning(floor: Sequence[float | None], expected_high: Sequence[float | None]) -> ProfileFinding | None:
+    """The draft's night floor sits above the achievable ribbon's p75 for at least half the night steps it covers:
+    the house is not expected to hold that floor tonight without the dry-out (#1433)."""
+    pairs = [
+        (low, high) for low, high in zip(floor, expected_high, strict=True) if low is not None and high is not None
+    ]
+    above = [(low, high) for low, high in pairs if low > high]
+    if not pairs or 2 * len(above) < len(pairs):
+        return None
+    reach = max(high for _, high in pairs)
+    return ProfileFinding(
+        code="night_floor_unachievable",
+        severity="warning",
+        field="vpd_below_night",
+        detail=(
+            f"Tonight the house is expected to reach at most {reach:.2f} kPa (p75 of the achievable band); the night "
+            f"floor is above that for {round(100 * len(above) / len(pairs))}% of the night"
+        ),
+    )
+
+
+def all_findings(
+    anchors: Mapping[str, float],
+    fit: DewpointFit | None,
+    floor: Sequence[float | None] = (),
+    expected_high: Sequence[float | None] = (),
+) -> list[ProfileFinding]:
     out = [ProfileFinding(**vars(item)) for item in findings(anchors)]
-    warning = dewpoint_warning(anchors, fit)
-    if warning is not None:
-        out.append(warning)
+    for warning in (dewpoint_warning(anchors, fit), floor_warning(floor, expected_high)):
+        if warning is not None:
+            out.append(warning)
     return out
 
 
@@ -555,7 +499,12 @@ async def preview(
         current = await _current_anchors(conn)
         phase_rows = await conn.fetch(series.PREVIEW_PHASES_SQL, start, last)
         envelope_rows = await conn.fetch(
-            ENVELOPE_SQL, now, list(MOISTURE_EQUIPMENT), GREENHOUSE_ID, DEEP_NIGHT_ALTITUDE_DEG
+            ENVELOPE_SQL,
+            now - timedelta(days=ENVELOPE_DAYS),
+            now,
+            list(MOISTURE_EQUIPMENT),
+            GREENHOUSE_ID,
+            DEEP_NIGHT_ALTITUDE_DEG,
         )
         forecast_rows = await conn.fetch(FORECAST_SQL, start, end)
         measured_start, measured_end = measured_window(now)
@@ -569,6 +518,7 @@ async def preview(
     forecast = _forecast_map(forecast_rows)
     temp_current, temp_draft = axis_curve(current, "temp", phases), axis_curve(draft, "temp", phases)
     expected_low, expected_high = expected_vpd(fit, t, phases, temp_draft.target, forecast)
+    vpd_device = axis_curve(draft, "vpd", phases, bias or 0.0)
     return BandProfilePreview(
         day=day,
         step_s=series.PREVIEW_STEP_S,
@@ -581,7 +531,7 @@ async def preview(
         vpd=VpdPreview(
             current=axis_curve(current, "vpd", phases),
             draft=axis_curve(draft, "vpd", phases),
-            device=axis_curve(draft, "vpd", phases, bias or 0.0),
+            device=vpd_device,
             expected_low=expected_low,
             expected_high=expected_high,
         ),
@@ -595,7 +545,7 @@ async def preview(
         envelope=None
         if fit is None
         else EnvelopeFit(hours=fit.hours, days=ENVELOPE_DAYS, rmse_f=fit.rmse_f, dewpoint_p10_f=fit.dewpoint_p10_f),
-        findings=all_findings(draft, fit),
+        findings=all_findings(draft, fit, vpd_device.low, expected_high),
         measured=measured_overlay(t, measured_rows, measured_start, measured_end),
         forecast=forecast_overlay(t, forecast_rows),
     )

@@ -127,7 +127,7 @@
 .stack-key{margin:0}
 .chart-key-swatch[data-token=ink]{color:var(--ink)}.chart-key-swatch[data-token=c-bound]{color:var(--c-bound)}.chart-key-swatch[data-token=fault]{color:var(--fault)}
 .chart-key-swatch[data-token=c-setpoint]{color:var(--c-setpoint)}.chart-key-swatch[data-token=c-requested]{color:var(--c-requested)}.chart-key-swatch[data-token=c-band-edge]{color:var(--c-band-edge)}
-.chart-key-swatch[data-token=c-temp]{color:var(--c-temp)}.chart-key-swatch[data-token=c-vpd]{color:var(--c-vpd)}.chart-key-swatch[data-token=c-rh]{color:var(--c-rh)}
+.chart-key-swatch[data-token=c-temp]{color:var(--c-temp)}.chart-key-swatch[data-token=c-vpd]{color:var(--c-vpd)}.chart-key-swatch[data-token=c-rh]{color:var(--c-rh)}.chart-key-swatch[data-token=c-outdoor]{color:var(--c-outdoor)}
 .chart-key-swatch[data-token=eq-mister]{color:var(--eq-mister)}.chart-key-swatch[data-token=eq-water]{color:var(--eq-water)}
 .chart-key-swatch[data-token=eq-master]{color:var(--eq-master)}.chart-key-swatch[data-token=eq-fert]{color:var(--eq-fert)}
 .chart-key-swatch[data-token=eq-fog]{color:var(--eq-fog)}.chart-key-swatch[data-token=eq-heat1]{color:var(--eq-heat1)}

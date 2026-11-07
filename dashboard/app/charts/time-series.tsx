@@ -5,11 +5,11 @@ import { bandRange } from "../lib/band-range";
 import { formatNumber, formatValue, unitDecimals } from "../lib/format";
 import { csvFilename, windowCsv, type CsvBlock } from "./csv";
 import { CsvLink, DataTable, TimeCell, type DataTableBlock } from "./data-table";
-import { paintBandEdges, paintBandFill, paintBounds, paintForecast, paintFuture, paintLabels, paintNow, paintRetention, paintSteps, type ChartColors } from "./draw";
+import { paintAchievableEdges, paintBandEdges, paintBandFill, paintBounds, paintForecast, paintFuture, paintLabels, paintNow, paintRetention, paintSteps, type ChartColors } from "./draw";
 import { ENVELOPE_MIN_BUCKET_S, compareExtent, envelopeBars, envelopeExtent, excursions, paintCompare, paintEnvelope, paintExcursions, type CompareLine, type EnvelopeBar, type Excursion } from "./layers";
 import { ChartKey, Legend, type KeyItem } from "./legend";
 import {
-  FORECAST_RULE, PLANNED_AI, SUPERSEDED, bandAt, bandExtent, bandKindFor, bandNotes, bandRuns, extentUnion, forecastAt, forecastExtent, forecastLines, groupSteps, marksExtent, settingBounds, settingSteps, stepFinder, stepsAt,
+  ACHIEVABLE, FORECAST_RULE, PLANNED_AI, SUPERSEDED, achievableRuns, bandAt, bandExtent, bandKindFor, bandNotes, bandRuns, extentUnion, forecastAt, forecastExtent, forecastLines, groupSteps, marksExtent, settingBounds, settingSteps, stepFinder, stepsAt,
   type BandRun, type Bound, type ForecastInput, type ForecastLine, type StepKind, type StepSegment,
 } from "./marks";
 import { DAILY_SUMMARY_NOTE, retentionNote, runAt, staleness, traceGaps, type RetentionNote, type Staleness, type TraceGaps } from "./retention";
@@ -71,6 +71,8 @@ export type TimeSeriesModel = {
   bucketSeconds: number;
   traces: Trace[];
   runs: BandRun[];
+  /** The achievable VPD band (#1433), when API-06 was asked for it; graded beside the band. */
+  achievable: BandRun[];
   steps: StepSegment[];
   /** The steps in non-overlapping runs, for the tooltip's binary search. */
   stepGroups: StepSegment[][];
@@ -153,7 +155,7 @@ export function buildTimeSeriesModel(input: TimeSeriesInput): TimeSeriesModel {
   const runs = bandRuns(input.band, bandKindFor(unit), now);
   const primary = traces.findIndex((trace) => !/outdoor|forecast/.test(trace.key) && trace.dash === null);
   return {
-    unit, t, bucketSeconds, traces, runs,
+    unit, t, bucketSeconds, traces, runs, achievable: achievableRuns(input.band, bandKindFor(unit)),
     steps, stepGroups: groupSteps(steps),
     // A setting's min and max are its allowed range, not something the climate does: drawn on its own history only (#1354).
     bounds: metrics.length ? [] : settings.flatMap((setting) => settingBounds(setting, unit, prefix)),
@@ -181,6 +183,7 @@ export function chartNotes(model: TimeSeriesModel, hidden: ReadonlySet<string> =
   }
   for (const line of shownForecast(model, hidden)) notes.push(line.text);
   notes.push(...bandNotes(model.runs, model.now));
+  if (model.achievable.length) notes.push(ACHIEVABLE);
   return [...new Set(notes)];
 }
 
@@ -222,6 +225,8 @@ export function tooltipLines(model: TimeSeriesModel, plot: Pick<uPlot, "cursor" 
   lines.push(...reasons);
   const band = bandAt(model.runs, x);
   if (band) lines.push(`${band.label} ${formatValue(band.low, model.unit)}–${formatValue(band.high, model.unit)}`);
+  const achievable = bandAt(model.achievable, x);
+  if (achievable) lines.push(`${achievable.label} ${formatValue(achievable.low, model.unit)}–${formatValue(achievable.high, model.unit)}`);
   for (const step of stepsAt(model.stepGroups, x)) lines.push(step.detail);
   for (const line of shownForecast(model, hidden)) {
     const hour = forecastAt(line, x);
@@ -320,7 +325,7 @@ export function valueRange(model: TimeSeriesModel, hidden: ReadonlySet<string>, 
   if (layers.yRange) return [layers.yRange[0], layers.yRange[1]];
   const extra = extentUnion(
     layers.envelope && model.bucketSeconds >= ENVELOPE_MIN_BUCKET_S && primaryShown(model, hidden) ? envelopeExtent(model.envelope, x0, x1) : null,
-    layers.compare ? compareExtent(layers.compare, x0, x1) : null,
+    extentUnion(layers.compare ? compareExtent(layers.compare, x0, x1) : null, marksExtent(model.achievable, [], x0, x1)),
   );
   const steps = model.traces.length ? null : marksExtent([], model.steps, x0, x1);
   const data = extentUnion(extentUnion(extentUnion(traces, steps), forecastExtent(shownForecast(model, hidden), x0, x1)), extra);
@@ -386,6 +391,7 @@ export function timeSeriesOptions(env: ChartEnv, modelRef: MutableRefObject<Time
       drawAxes: [(plot) => {
         const current = modelRef.current;
         paintBandEdges(plot, current.runs, colors, px());
+        paintAchievableEdges(plot, current.achievable, current.runs, colors, px());
         if (layers().envelope && current.bucketSeconds >= ENVELOPE_MIN_BUCKET_S && primaryShown(current, hiddenRef.current)) paintEnvelope(plot, current.envelope, colors, px());
       }],
       draw: [(plot) => {
@@ -415,7 +421,8 @@ export function dataTables(model: TimeSeriesModel, hidden: ReadonlySet<string>):
   const unit = model.unit;
   const banded = model.runs.length > 0;
   const named = (trace: Trace, text: string) => (traces.length > 1 ? `${trace.label}: ${text}` : text);
-  const headers = ["Time", ...traces.map((trace) => `${trace.label} (${unit})`), ...(banded ? [`Band (${unit})`, "Band source"] : []), "Note"];
+  const reachable = model.achievable.length > 0;
+  const headers = ["Time", ...traces.map((trace) => `${trace.label} (${unit})`), ...(banded ? [`Band (${unit})`, "Band source"] : []), ...(reachable ? [`Achievable (${unit})`] : []), "Note"];
   const buckets: DataTableBlock = {
     caption: `${traces.map((trace) => trace.label).join(", ") || "Values"} · America/Denver`, headers, count: model.t.length,
     rows: () => model.t.map((at, index) => {
@@ -432,7 +439,9 @@ export function dataTables(model: TimeSeriesModel, hidden: ReadonlySet<string>):
       }
       const band = banded ? bandAt(model.runs, at) : null;
       const bandCells: ReactNode[] = banded ? [band ? `${formatValue(band.low, unit)}–${formatValue(band.high, unit)}` : "—", band ? band.label : "—"] : [];
-      return [<TimeCell key="t" at={at} />, ...traces.map((trace) => traceValue(model, trace, index)), ...bandCells, notes.join("; ")];
+      const achievable = reachable ? bandAt(model.achievable, at) : null;
+      const achievableCells: ReactNode[] = reachable ? [achievable ? `${formatValue(achievable.low, unit)}–${formatValue(achievable.high, unit)}` : "—"] : [];
+      return [<TimeCell key="t" at={at} />, ...traces.map((trace) => traceValue(model, trace, index)), ...bandCells, ...achievableCells, notes.join("; ")];
     }),
   };
   const forecast = shownForecast(model, hidden).map((line): DataTableBlock => ({

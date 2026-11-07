@@ -758,7 +758,8 @@ def test_the_2026_11_01_band_reads_74_92_to_84_92_with_the_crop_band():
     seed_sql = next(sql for sql, _ in conn.fetches if "DISTINCT ON (band_role)" in sql)
     assert indexed in band_sql and indexed in seed_sql
     payload = result.model_dump(mode="json", by_alias=True)
-    assert set(payload) == {"from", "to", "step_s", "t", "band", "crop"}
+    assert set(payload) == {"from", "to", "step_s", "t", "band", "crop", "achievable"}
+    assert payload["achievable"] is None  # only when asked for (#1433)
 
 
 def test_band_parameters_are_the_names_emit_band_audit_writes():

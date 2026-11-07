@@ -89,8 +89,11 @@ async def band(
     from_: WindowStart,
     to: WindowEnd,
     zone: Annotated[service.BandZone, Query(description="North has no zone band and is not offered")] = "house",
+    achievable: Annotated[
+        bool, Query(description="The house's achievable VPD band and its nightly grades (#1433); windows up to 35 days")
+    ] = False,
 ) -> service.BandTimeline:
-    return await service.band(conn, from_, to, zone)
+    return await service.band(conn, from_, to, zone, achievable=achievable)
 
 
 @router.get(

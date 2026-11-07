@@ -85,12 +85,24 @@ kPa). Advanced shows the 24 raw anchors; uneven shoulders warn when the overshoo
   forecast;
 - the night heat estimate, 0.19 kW per °F of target above the forecast outdoor temperature;
 - findings: errors (band order, guardrails, the night floor) and warnings (overshoot; a night floor that needs an
-  indoor dewpoint below the driest tenth of the last 14 nights);
+  indoor dewpoint below the driest tenth of the last 14 nights; `night_floor_unachievable`, a night floor above the
+  ribbon's p75 for at least half the night);
 - `measured`: the last 24 h of the house average (`climate.temp_avg` and `vpd_avg`, 10-min averages, API-04's read),
   placed on the day's steps by America/Denver clock time, so left of the now line is today and right of it yesterday;
   the chart draws it solid in the metric's colour, as Graphs does, and the target as stored takes the band's edge colour;
 - `forecast`: the day's outdoor forecast temperature and VPD (the newest issue per hour), dashed in `--c-outdoor`, read
   STALE when issued more than 3 h ago (#1354).
+
+**Achievable band (#1433).** The ribbon's model is `verdify_schemas.vpd_envelope`, shared by the editor and Graphs.
+API-06 with `achievable=true` (house, windows up to 35 days) returns the achievable band beside the band: at night the
+band in force widened to the ribbon (low edge down to its p25, high edge up to its p75, where they lie outside), by day
+the band itself. Each night's fit is rolling: the 14 days before that night's local noon. Past steps evaluate the ribbon
+at the house temperature measured (so the VPD grade does not repeat the temperature grade), steps ahead at the band's
+temperature; outdoor values are measured up to now and forecast after. On 2026-10-29..11-05 it predicted the measured
+night VPD with an MAE of 0.07 kPa (bias +0.02). `achievable.nights` grades each night's house VPD, at the timeline's step, against the
+served band and the achievable band (in and below shares). Graphs → Climate draws the achievable edges dashed in
+`--c-outdoor` where they leave the band, and the VPD header reads "in band N% · achievable M%". The band itself is not
+changed: the night floor stays at least 0.74 kPa (#1365). There is no SQL mirror: no rollup consumes it yet.
 
 **MCP.** `band_profile` returns API-23's JSON with no draft, and `band_profile_preview` takes the same fields and raw
 anchors and saves nothing. Named agents and admin may call them; Iris may not. There is no band write tool: the band is

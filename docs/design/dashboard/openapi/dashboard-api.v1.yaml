@@ -155,7 +155,10 @@ paths:
         today's anchors over the whole window: for house, fn_band_setpoints(ts) over the step series, which gives the
         same crop values as fn_band_timeline; for another zone, the house temperature crop band with
         fn_zone_vpd_targets(ts) ∓ the zone crop's crop_band_anchors widths. The step matches the window: at least 5
-        min and at most 2,000 points.
+        min and at most 2,000 points. With achievable (house, windows up to 35 days; #1433), achievable adds the
+        band the house can be expected to hold: at night the band widened to the expected VPD ribbon of a rolling
+        14-day indoor-dewpoint fit (verdify_schemas.vpd_envelope), by day the band itself, and each night graded
+        against both bands.
       parameters:
         - $ref: '#/components/parameters/From'
         - $ref: '#/components/parameters/To'
@@ -163,6 +166,10 @@ paths:
           in: query
           description: North has no zone band and is not offered
           schema: {type: string, enum: [house, center, south, west, east], default: house}
+        - name: achievable
+          in: query
+          description: The house's achievable VPD band and its nightly grades (#1433); windows up to 35 days
+          schema: {type: boolean, default: false}
       responses:
         '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/BandTimeline'}}}}
         default: {$ref: '#/components/responses/Problem'}
@@ -1578,6 +1585,50 @@ components:
         t: {type: array, items: {type: integer}, description: Epoch seconds}
         band: {$ref: '#/components/schemas/BandColumns', description: 'In force (DERIVED band rows of the requested zone); null beyond 90 days'}
         crop: {$ref: '#/components/schemas/BandColumns', description: 'Reconstructed from today''s anchors (API-06 says how per zone)'}
+        achievable:
+          description: 'Asked for with achievable: the house''s achievable VPD band and grades; null otherwise, for a zone or past 35 days'
+          anyOf: [{$ref: '#/components/schemas/AchievableColumns'}, {type: 'null'}]
+    AchievableColumns:
+      type: object
+      description: >-
+        The house VPD band the house can be expected to hold, one point per step (#1433). At night (sunset to sunrise)
+        the expected ribbon is es(T) − es(Td_in ± 0.674·RMSE) at the house temperature the step measured (ahead of now,
+        the band's temperature), with Td_in from a rolling
+        least-squares fit of indoor dewpoint on indoor temperature, outdoor temperature and outdoor dewpoint over the
+        14 days of deep-night hours with no vent, fan, fog or mister before the night's local noon (before now for a
+        night ahead); outdoor values are measured up to now and forecast after. The achievable band is the band in
+        force (else the crop band) with its low edge dropped to the ribbon's p25 and its high edge raised to its p75
+        where they lie outside; by day, and with no fit, it is the band.
+      required: [vpd_low, vpd_high, expected_low, expected_high, nights, days]
+      properties:
+        vpd_low: {$ref: '#/components/schemas/NullableNumbers'}
+        vpd_high: {$ref: '#/components/schemas/NullableNumbers'}
+        expected_low: {$ref: '#/components/schemas/NullableNumbers', description: 'Expected night VPD, p25; null by day or without a fit'}
+        expected_high: {$ref: '#/components/schemas/NullableNumbers', description: 'Expected night VPD, p75'}
+        days: {type: integer, description: Days of deep-night hours each night's fit reads}
+        nights:
+          type: array
+          description: Each night in the window graded at the step against the served band and the achievable band
+          items: {$ref: '#/components/schemas/AchievableNight'}
+    AchievableNight:
+      type: object
+      required: [night, graded, served_in_pct, achievable_in_pct, below_served_pct, below_achievable_pct, fit]
+      properties:
+        night: {type: string, format: date, description: America/Denver date of the night's evening}
+        graded: {type: integer, description: Night steps with a measured house VPD and a band}
+        served_in_pct: {type: [number, 'null'], description: Share of graded steps inside the served band}
+        achievable_in_pct: {type: [number, 'null'], description: Share of graded steps inside the achievable band}
+        below_served_pct: {type: [number, 'null'], description: Share below the served band's low edge}
+        below_achievable_pct: {type: [number, 'null'], description: Share below the achievable band's low edge}
+        fit:
+          description: The rolling dewpoint fit the night used; null with fewer than 24 hours
+          anyOf: [{$ref: '#/components/schemas/AchievableFit'}, {type: 'null'}]
+    AchievableFit:
+      type: object
+      required: [hours, rmse_f]
+      properties:
+        hours: {type: integer, description: Deep-night hours the fit used}
+        rmse_f: {type: number, description: 'Root-mean-square dewpoint error, °F'}
     BandColumns:
       type: object
       required: [temp_low, temp_high, vpd_low, vpd_high]
@@ -1708,7 +1759,7 @@ components:
             type: object
             required: [code, severity, field, detail]
             properties:
-              code: {type: string, examples: [band_order, guardrail, night_floor, overshoot, dewpoint_unreached]}
+              code: {type: string, examples: [band_order, guardrail, night_floor, overshoot, dewpoint_unreached, night_floor_unachievable]}
               severity: {type: string, enum: [error, warning]}
               field: {type: string}
               detail: {type: string}

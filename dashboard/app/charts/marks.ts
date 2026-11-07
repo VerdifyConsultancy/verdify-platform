@@ -76,6 +76,30 @@ export function bandRuns(timeline: BandTimeline | null | undefined, kind: BandKi
   return runs;
 }
 
+/**
+ * The achievable band (#1433): the band widened at night to the VPD the house is expected to reach, API-06's
+ * `achievable` (VPD only). By day it is the band itself, so it draws only where it leaves the band.
+ */
+export const ACHIEVABLE = "Achievable band · the band widened at night to the VPD the house is expected to reach (rolling 14-day dewpoint fit, p25–p75)";
+export function achievableRuns(timeline: BandTimeline | null | undefined, kind: BandKind | null): BandRun[] {
+  const achievable = timeline?.achievable;
+  if (!timeline || !achievable || kind !== "vpd") return [];
+  const runs: BandRun[] = [];
+  let current: BandRun | null = null;
+  timeline.t.forEach((at, index) => {
+    const low = achievable.vpd_low[index], high = achievable.vpd_high[index];
+    if (low === null || low === undefined || high === null || high === undefined) { current = null; return; }
+    if (!current) { current = { source: "band", label: "Achievable", t: [], low: [], high: [] }; runs.push(current); }
+    current.t.push(at); current.low.push(low); current.high.push(high);
+  });
+  return runs;
+}
+/** Whether the achievable edge at `index` of `run` leaves the band's edge there (more than rounding apart). */
+export function leavesBand(run: BandRun, edge: "low" | "high", index: number, band: readonly BandRun[]): boolean {
+  const at = bandAt(band, run.t[index]);
+  return !at || Math.abs(run[edge][index] - at[edge]) > 0.004;
+}
+
 /** The band's provenance, said once in the notes above a chart (never painted on the band, #1354). */
 export const BAND_AHEAD = "Band ahead of now · reconstructed from today's crop anchors";
 export const BAND_BEFORE = "Band before the 90 days kept · reconstructed from today's crop anchors";
