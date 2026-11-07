@@ -53,6 +53,7 @@ FORECAST_HOURS = 12
 MAX_ALERTS = 5
 MAX_NEXT = 3
 MAX_SHEET_CHARS = 8000
+ERROR_BODY_CHARS = 200
 
 SYSTEM_PROMPT = (
     "You write the greenhouse snapshot shown at the top of the Verdify dashboard. "
@@ -112,6 +113,9 @@ def _forecast(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any] | None:
     gusts = [row["wind_gust_mph"] for row in rows if row.get("wind_gust_mph") is not None]
     rain = [row["precip_prob_pct"] for row in rows if row.get("precip_prob_pct") is not None]
     return {
+        # The window is a fact too: the model writes "the next 12 hours", and the number check only passes numbers
+        # the sheet holds as values, not the 12 in this block's key (#1346, 11 rejections on 2026-11-06/07).
+        "hours_ahead": FORECAST_HOURS,
         "outdoor_low_f": _round(low[0], 0),
         "outdoor_low_at": _local(low[1]),
         "outdoor_high_f": _round(high[0], 0),
@@ -246,6 +250,18 @@ def request_body(sheet: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
+def http_error(response: httpx.Response, key: str) -> str:
+    """``HTTP <status>`` plus the start of the body, so a stored error tells a missing route (GPUStack answers 404
+    while the route has no reachable instance) from an overload. The key never reaches the row."""
+    try:
+        body = " ".join(response.text.split())
+    except Exception:  # an undecodable body adds nothing
+        body = ""
+    if key:
+        body = body.replace(key, "<key>")
+    return f"HTTP {response.status_code}" + (f": {body[:ERROR_BODY_CHARS]}" if body else "")
+
+
 @dataclass(frozen=True)
 class Answer:
     content: str | None
@@ -273,7 +289,7 @@ async def call_cortex(
             await client.aclose()
     latency = int((time.monotonic() - started) * 1000)
     if response.status_code != 200:
-        return Answer(None, latency, None, None, f"HTTP {response.status_code}")
+        return Answer(None, latency, None, None, http_error(response, key))
     try:
         payload = response.json()
         choice = payload["choices"][0]

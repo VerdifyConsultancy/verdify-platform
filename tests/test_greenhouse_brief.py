@@ -218,6 +218,7 @@ def test_the_sheet_rounds_uses_local_times_and_keeps_out_what_it_must():
     assert sheet["climate_mode"]["since"] == "11:05"
     assert sheet["running_now"] == [{"equipment": "fan1", "cause": None, "since": "11:47"}]
     assert sheet["outdoor_forecast_next_12h"] == {
+        "hours_ahead": 12,
         "outdoor_low_f": 40,
         "outdoor_low_at": "11:50",
         "outdoor_high_f": 51,
@@ -323,6 +324,33 @@ def test_transport_failure_and_a_cut_answer_are_errors_or_rejections(monkeypatch
     assert (inserted(conn)["status"], inserted(conn)["error"]) == ("error", "HTTP 503")
     run(monkeypatch, tmp_path, conn, lambda request: completion("It is 78.0 °F and", finish="length"))
     assert (inserted(conn)["status"], inserted(conn)["error"]) == ("rejected", "cut at max_tokens")
+
+
+def test_the_forecast_window_is_a_fact_so_next_12_hours_passes_the_number_check():
+    # 2026-11-06/07: 11 briefs were rejected with "number 12 is not in the facts" for "the next 12 hours":
+    # the 12 lived only in the key outdoor_forecast_next_12h. A number the model works out is still rejected.
+    rows = [{"ts": AT + timedelta(hours=h), "temp_f": 36 + h, "precip_prob_pct": 0.0} for h in range(12)]
+    sheet = job.build_sheet(job.Gathered(now=now_model(), forecast=rows), AT)
+    text = (
+        "The greenhouse air is at 78.0 °F and 66% relative humidity, inside its band. "
+        "The next 12-hour forecast shows a high of 47 °F at 22:50 and a low of 36 °F at 11:50. "
+        "Over the next 12 hours there is a 0% chance of precipitation."
+    )
+    assert brief.check_text(text, sheet) is None
+    worked_out = text.replace("0% chance of precipitation", "0% chance of precipitation, 3.4 hours after noon")
+    assert brief.check_text(worked_out, sheet) == "number 3.4 is not in the facts"
+
+
+def test_an_http_error_keeps_the_start_of_the_body_and_never_the_key(monkeypatch, tmp_path):
+    conn = FakeConn()
+    body = {"error": {"message": "model llm.primary.longctx not found", "echo": "Bearer sk-test"}}
+    run(monkeypatch, tmp_path, conn, lambda request: httpx.Response(404, json=body))
+    row = inserted(conn)
+    assert row["status"] == "error"
+    assert row["error"].startswith('HTTP 404: {"error":{"message":"model llm.primary.longctx not found"')
+    assert "sk-test" not in row["error"] and "<key>" in row["error"]
+    run(monkeypatch, tmp_path, conn, lambda request: httpx.Response(502, text="x" * 500))
+    assert inserted(conn)["error"] == "HTTP 502: " + "x" * job.ERROR_BODY_CHARS
 
 
 def test_a_missing_key_fails_closed_without_a_call(monkeypatch, tmp_path):
