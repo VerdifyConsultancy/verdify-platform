@@ -268,4 +268,4 @@ def test_future_scheduled_snapshot_is_reconciled_but_not_completed():
 
 def test_owning_regressions_are_in_existing_ci_group():
     runner = (Path(__file__).resolve().parents[1] / "scripts/ci-local.sh").read_text()
-    assert "  tests/test_experiment_v2_reconcile.py \\\n" in runner
+    assert any(line.strip() == "tests/test_experiment_v2_reconcile.py" for line in runner.splitlines())
