@@ -1266,3 +1266,46 @@ def test_v3_wire_contract_accepts_the_accepted_firmware_pin():
     with pytest.raises(ValueError, match="not qualified for this firmware"):
         validate_wire_contract(contract, document, "  ")
     assert validate_wire_contract(contract, document, pinned + "\n")
+
+
+@pytest.mark.parametrize(
+    ("firmware", "pin", "accepted"),
+    [
+        ("2026.11.7.0133.9517acb6", None, True),  # the W6 flash, the literal fallback
+        ("2026.11.7.0133.9517acb6", "2026.11.7.0133.9517acb6", True),
+        ("2026.11.3.0435.5e24d07c", None, False),  # superseded engine build, no pin
+        ("2026.11.6.0938.36c7630c", "2026.11.7.0133.9517acb6", False),  # stale against the pin
+        ("2026.10.15.1200.620a218a", None, False),  # pre-engine firmware
+        ("unknown", "", False),
+    ],
+)
+def test_v3_wire_contract_firmware_gate_after_w6_flash(firmware, pin, accepted):
+    """#1277: the current flash passes; old, superseded or unknown firmware stays fail-closed."""
+    from verdify_schemas.control_band_wire import SUPPORTED_FIRMWARE, validate_wire_contract, wire_resolver_revision
+
+    assert SUPPORTED_FIRMWARE == "2026.11.7.0133.9517acb6"
+    document = wire_artifact()
+    document["revisions"]["firmware_revision"] = firmware
+    contract = document["served_wire_contract"]
+    contract["worksheet"]["preview"]["identity"]["firmware_revision"] = firmware
+    document["revisions"]["crop_band_resolver_revision"] = wire_resolver_revision(contract)
+    if accepted:
+        assert validate_wire_contract(contract, document, pin)
+    else:
+        with pytest.raises(ValueError, match="not qualified for this firmware"):
+            validate_wire_contract(contract, document, pin)
+
+
+def test_tool_a_passes_the_accepted_firmware_pin_to_the_wire_contract():
+    """#1277: offline Tool A validates a capture on a newer flash only when given its pin."""
+    from verdify_schemas.control_band_wire import wire_resolver_revision
+
+    document = wire_artifact()
+    pinned = "2026.11.8.0000.0123abcd"
+    document["revisions"]["firmware_revision"] = pinned
+    contract = document["served_wire_contract"]
+    contract["worksheet"]["preview"]["identity"]["firmware_revision"] = pinned
+    document["revisions"]["crop_band_resolver_revision"] = wire_resolver_revision(contract)
+    with pytest.raises(cap.GridCaptureError, match="not qualified for this firmware"):
+        cap.parse_input_artifact(document)
+    assert cap.parse_input_artifact(document, accepted_firmware=pinned).served_wire_report

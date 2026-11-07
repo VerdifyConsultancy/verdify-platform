@@ -240,8 +240,10 @@ def resolve_served_wire(desired: dict, sample: datetime, night_bias: float) -> d
 # #1277: validate_wire_contract also accepts the accepted firmware pin (the version
 # `firmware-release-job.py pin` wrote after a flash), so this constant no longer goes stale on
 # every release. That is sound only while FIRMWARE_SOURCES above still hash-match the source the
-# pin was built from: algorithm_revision() refuses any other solar/band source.
-SUPPORTED_FIRMWARE = "2026.11.3.0435.5e24d07c"
+# pin was built from: algorithm_revision() refuses any other solar/band source. The literal is the
+# fallback when no pin is passed (offline Tool A without --accepted-firmware); it names the W6 flash
+# 2026.11.7.0133.9517acb6, whose greenhouse_solar.h and controls.yaml hash-match FIRMWARE_SOURCES.
+SUPPORTED_FIRMWARE = "2026.11.7.0133.9517acb6"
 # The ELF whose solar and band instructions were last inspected: 620a218a's, not yet the engine's.
 TARGET_ELF_SHA256 = "39a237cfb044e72633d52646c203d27b1217ba9f9de3d4a8308798b1b7a96b5b"
 SQL_FUNCTIONS = (

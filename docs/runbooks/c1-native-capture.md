@@ -96,7 +96,10 @@ same source identity: `algorithm_revision()` refuses any capture whose
 `FIRMWARE_SOURCES` hashes (greenhouse_solar.h and controls.yaml) differ from the
 ingestor's source, and a change to either file must restate in
 `verdify_schemas/control_band_wire.py` that the solar and band expressions are
-unchanged. `TARGET_ELF_SHA256` still names 620a218a's ELF,
+unchanged. Offline Tool A takes the same pin as `--accepted-firmware`. Without a
+pin, the `SUPPORTED_FIRMWARE` fallback names the W6 flash
+`2026.11.7.0133.9517acb6` (source `9517acb6`), whose two source files match
+`FIRMWARE_SOURCES`. `TARGET_ELF_SHA256` still names 620a218a's ELF,
 the last one whose instructions were inspected. To move it, read `elf_sha256`
 from a verify Job's log (`docs/runbooks/firmware-signed-artifacts.md`), repeat
 the instruction inspection on that ELF, then change the constant and this section.

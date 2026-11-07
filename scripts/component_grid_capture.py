@@ -1109,8 +1109,11 @@ class CaptureInput:
     served_wire_report: dict[str, Any] | None = None
 
 
-def parse_input_artifact(document: Mapping[str, Any]) -> CaptureInput:
-    """Validate the input artifact's shape; raise ``GridCaptureError`` if unsafe."""
+def parse_input_artifact(document: Mapping[str, Any], *, accepted_firmware: str | None = None) -> CaptureInput:
+    """Validate the input artifact's shape; raise ``GridCaptureError`` if unsafe.
+
+    ``accepted_firmware`` is the accepted firmware pin (#1277), as the ingestor passes it.
+    """
     if not isinstance(document, Mapping):
         raise GridCaptureError("input artifact root must be an object")
     expected_keys = {
@@ -1189,7 +1192,7 @@ def parse_input_artifact(document: Mapping[str, Any]) -> CaptureInput:
         from verdify_schemas.control_band_wire import validate_wire_contract
 
         try:
-            report = validate_wire_contract(document["served_wire_contract"], document)
+            report = validate_wire_contract(document["served_wire_contract"], document, accepted_firmware)
         except (ValueError, TypeError, KeyError, OverflowError, OSError) as exc:
             raise GridCaptureError("invalid independent served wire contract: " + str(exc)) from exc
     return CaptureInput(
@@ -1209,9 +1212,10 @@ def capture_from_artifact(
     document: Mapping[str, Any],
     *,
     max_observation_age_s: int = DEFAULT_MAX_OBSERVATION_AGE_S,
+    accepted_firmware: str | None = None,
 ) -> GridCaptureResult:
     """Parse then capture — the single entry point the CLI uses."""
-    parsed = parse_input_artifact(document)
+    parsed = parse_input_artifact(document, accepted_firmware=accepted_firmware)
     result = capture(
         device_id=parsed.device_id,
         observed_at=parsed.observed_at,
@@ -1419,6 +1423,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         help=f"maximum readback age still considered truthful (default: {DEFAULT_MAX_OBSERVATION_AGE_S})",
     )
     parser.add_argument(
+        "--accepted-firmware",
+        help="accepted firmware pin (/srv/verdify/state/expected-firmware-version) a v3 wire contract may bind (#1277)",
+    )
+    parser.add_argument(
         "--expect-grid-revision",
         help="fail unless the derived revision equals this value (re-verification of a prior capture)",
     )
@@ -1438,7 +1446,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         parser.exit(2, f"grid capture refused: input artifact is not strict UTF-8 JSON: {exc}\n")
 
     try:
-        result = capture_from_artifact(document, max_observation_age_s=args.max_observation_age_s)
+        result = capture_from_artifact(
+            document,
+            max_observation_age_s=args.max_observation_age_s,
+            accepted_firmware=args.accepted_firmware,
+        )
     except GridCaptureError as exc:
         parser.exit(2, f"grid capture refused: {exc}\n")
 
