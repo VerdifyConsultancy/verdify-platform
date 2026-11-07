@@ -33,19 +33,6 @@ export PATH="$("$PY" -c 'import pathlib, sys; print(pathlib.Path(sys.executable)
 
 step() { printf '\n== %s ==\n' "$1"; }
 
-# CI_PYTEST_WORKERS (set by ci/gha/validate.sh from the job's CPU quota) runs the long
-# pure-logic step with pytest-xdist, work-stealing. Unset or 0 keeps it serial.
-# Files with tight wall-clock bounds (k3s-smoke subprocess timeouts, the writer
-# heartbeat cadence) are deselected from the parallel pass and run serially right
-# after it (same tests).
-XDIST=()
-XDIST_SERIAL=(tests/test_k3s_smoke_device_monitor.py tests/test_k3s_smoke_g10.py
-  tests/test_16_writer_lifecycle.py)
-if [ "${CI_PYTEST_WORKERS:-0}" -gt 0 ]; then
-  XDIST=(-n "$CI_PYTEST_WORKERS" --dist worksteal)
-  for serial_test in "${XDIST_SERIAL[@]}"; do XDIST+=(--deselect "$serial_test"); done
-fi
-
 step "ruff lint"
 $RUFF check cortex_planner/ ingestor/ api/ experiment_orchestrator/ mcp/ scripts/*.py tests/ verdify_public/ verdify_schemas/ verdify_services/ \
   research/planner-efficacy/generate_v2_artifacts.py \
@@ -100,7 +87,7 @@ step "device write gate"
 $PY -m pytest -q tests/test_device_write_gate.py tests/test_replay_outdoor_device_age.py tests/test_replay_setpoint_export.py tests/test_replay_accepted_threshold.py
 
 step "pure-logic / contract tests"
-$PY -m pytest -q -rs ${XDIST[@]+"${XDIST[@]}"} \
+$PY -m pytest -q -rs \
   tests/test_setpoint_listener_reconnect.py \
   tests/test_portable_stateful_placement.py \
   tests/test_component_runtime_probe.py \
@@ -390,9 +377,6 @@ $PY -m pytest -q -rs ${XDIST[@]+"${XDIST[@]}"} \
   tests/test_writer_outbound_boundary.py \
   tests/test_verify_component_proof_packet.py \
   tests/test_writer_lease_fence.py
-if [ "${#XDIST[@]}" -gt 0 ]; then
-  $PY -m pytest -q -rs "${XDIST_SERIAL[@]}"
-fi
 
 step "offline suites that no step collected before"
 # Two invocations: these files import ingestor/ as a package, while several
