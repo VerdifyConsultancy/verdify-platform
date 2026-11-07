@@ -39,11 +39,13 @@ def _writer_env(monkeypatch):
     monkeypatch.setattr(esp32_push, "_BATCH_PAUSE_S", 0.0)
     monkeypatch.delenv("VERDIFY_DEVICE_WRITE_ENABLED", raising=False)
     esp32_push.set_experiment_policy_hold(False)
+    esp32_push.set_component_authority_hold(False)
     esp32_push._DEVICE_WRITE_DISABLED_LOGGED = False
     yield
     shared.esp32.clear()
     shared.esp32.update(saved)
     esp32_push.set_experiment_policy_hold(False)
+    esp32_push.set_component_authority_hold(False)
 
 
 def _install_client(order: list) -> MagicMock:
