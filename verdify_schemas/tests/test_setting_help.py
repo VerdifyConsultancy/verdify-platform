@@ -118,3 +118,13 @@ def test_derived_registry_rows_name_writable_sources():
         for source in source_params(name):
             assert source in REGISTRY and desired_write_rule(source)[0], (name, source)
     assert source_params("activity_start_hour")
+
+
+def test_no_setting_text_names_a_non_public_crop():
+    """The lab ai-tunables page renders this text publicly; the public-output guard refuses excluded crops."""
+    from verdify_public.output_policy import PUBLIC_CROP_EXCLUDE_SLUGS
+
+    texts = [repr(entry) for entry in HELP.values()]
+    texts += [repr(band_in_force_help(zone, role)) for zone in BAND_ZONES for role in HOUSE_SERIES]
+    found = sorted({slug for text in texts for slug in PUBLIC_CROP_EXCLUDE_SLUGS if slug in text.casefold()})
+    assert not found, f"setting text names non-public crops: {found}"
