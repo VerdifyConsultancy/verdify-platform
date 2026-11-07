@@ -32,8 +32,8 @@ ACTIVE_PLANNER_MODEL_LABEL = "hermes-iris/custom:gpt-6-luna/xhigh"
 
 # #1363: the zot custody copy of the unchanged upstream digest.
 HERMES_IMAGE = (
-    "registry.vallery.net/jvallery/mirror-docker-io-nousresearch-hermes-agent:pinned-a7111ab1cc43"
-    "@sha256:a7111ab1cc43b5a1bc76090a505d6462aa1af4b43f603f0113bf5eb121aec72e"
+    "registry.vallery.net/verdifyconsultancy/verdify-hermes-agent"
+    "@sha256:1fa1f16e8e3463452b390ad6d16b41bc673c41921eb0c37bdb4e8d0ffd5f40a8"
 )
 
 
