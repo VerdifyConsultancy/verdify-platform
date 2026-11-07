@@ -355,11 +355,11 @@ images:
   - name: ghcr.io/verdifyconsultancy/verdify-experiment-v2-orchestrator
     newName: registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator
     digest: sha256:4d3d80950315ffa17e18a7cbfa7f4c592c5fb086bfc7f5c793e1e10081d91fbe
-  # Hand-pinned planner: source 00b53fe3 (W6 release 5, #1453 Slack removal), GHA build run
-  # 42340379526; rollback 61b1e7aaf510 (96a1d6bd, #822 liveness fix).
+  # Hand-pinned planner: source eeeeabc1 (W6 release 6, #1458 anyio/certifi CVE lock), GHA build run
+  # 42349735728; rollback a02c2a36cd7c (00b53fe3, release 5).
   - name: ghcr.io/verdifyconsultancy/verdify-planner
     newName: registry.vallery.net/verdifyconsultancy/verdify-planner
-    digest: sha256:a02c2a36cd7cf0931a3c824f68f419311a90e3934503e7e70b1970254a3264cc
+    digest: sha256:e7cc91834cd838cbbced673a193af8b37692f4864319778d138f9ae84edbe9fc
   # Hand-pinned grow-light writer: source 130a954e0ce7 (W6 lane C #1430 + lane E #1429), GHA build run
   # 42294583580. Rollback: 6d2772f8776b (source 36c7630c7858, build verdify-platform-ci-jrgfp). The #399 HA call allowlist confines
   # this prod-only writer to the declared main/grow light switches.
