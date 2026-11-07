@@ -179,7 +179,7 @@ def _legacy_edge(axis: str, side: str, refs: tuple[str, ...]) -> HelpEntry:
     )
 
 
-def _zone_target(zone: str, crop: str) -> HelpEntry:
+def _zone_target(zone: str, crop: str | None) -> HelpEntry:
     if zone == "east":
         use = (
             "The east zone has no mister, but the controller still uses this value: east VPD above it counts as a "
@@ -210,15 +210,16 @@ def _zone_target(zone: str, crop: str) -> HelpEntry:
     )
 
 
-def _zone_priority(zone: str, crop: str) -> HelpEntry:
+def _zone_priority(zone: str, crop: str | None) -> HelpEntry:
+    held = f" ({crop})" if crop else ""
     if zone == "east":
         return HelpEntry(
-            summary=f"Misting rank of the east zone ({crop}); 1 is served first.",
+            summary=f"Misting rank of the east zone{held}; 1 is served first.",
             effect="The east zone has no mister, so the controller leaves it out when it ranks zones for a pulse.",
             refs=(f"{_IRRIGATION}::irr_rank_vpd_zone", f"{_SOLAR}::arbitrate_wet_zone"),
         )
     return HelpEntry(
-        summary=f"Misting rank of the {zone} zone ({crop}); 1 is served first.",
+        summary=f"Misting rank of the {zone} zone{held}; 1 is served first.",
         effect=(
             "When more than one mister zone may run, each pulse goes to the best-ranked zone whose VPD is above "
             "its band target, ties going to the driest; if none is above target, the best-ranked zone gets it. "
@@ -254,12 +255,12 @@ ENTRIES: dict[str, HelpEntry] = {
     "temp_high": _legacy_edge("temp", "high", _LEGACY_TEMP_REFS),
     "vpd_low": _legacy_edge("vpd", "low", _LEGACY_VPD_REFS),
     "vpd_high": _legacy_edge("vpd", "high", _LEGACY_VPD_REFS),
-    "vpd_target_south": _zone_target("south", "cannabis"),
+    "vpd_target_south": _zone_target("south", None),
     "vpd_target_west": _zone_target("west", "citrus"),
     "vpd_target_east": _zone_target("east", "pepper"),
     "vpd_target_center": _zone_target("center", "Vanda orchids"),
     "zone_priority_center": _zone_priority("center", "Vanda orchids"),
-    "zone_priority_south": _zone_priority("south", "cannabis"),
+    "zone_priority_south": _zone_priority("south", None),
     "zone_priority_west": _zone_priority("west", "citrus"),
     "zone_priority_east": _zone_priority("east", "pepper"),
     "wet_taper_before_sunset_min": HelpEntry(

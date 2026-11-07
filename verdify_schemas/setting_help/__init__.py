@@ -76,7 +76,7 @@ _CURVE = (
 )
 _ZONE_WORDS = {
     "center": "center zone (orchids)",
-    "south": "south zone (cannabis)",
+    "south": "south zone",
     "west": "west zone (citrus)",
     "east": "east zone (peppers)",
 }
