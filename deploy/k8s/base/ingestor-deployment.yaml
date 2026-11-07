@@ -69,12 +69,12 @@ spec:
       # is safe and makes the arm a pure config flip. A pod with no projected SA
       # token, or with the flag off, degrades to the pre-fence always-held no-op.
       serviceAccountName: verdify-ingestor
-      # Device writers are ordinary control-plane workloads, not GPU services.
-      # Keep the hard class boundary generic so the scheduler can select any
-      # healthy general worker while the prod overlay's soft node6 avoidance
-      # remains an independent preference.
+      # No node-class selector (D-127: node classes follow hardware, and node4/
+      # node5 move from general to gpu). The prod overlay pins the writer to the
+      # node4/node5 egress set by hostname (ingestor-resilience.patch.yaml).
       nodeSelector:
-        agentfleet.vallery.net/node-class: general
+        kubernetes.io/os: linux
+        agentfleet.vallery.net/control-plane: "false"
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
