@@ -28,8 +28,8 @@ export function breakableKey(key: string): ReactNode {
  * decides writability. It keys on `group`, never on `readback_via` alone: a Band in force row is DERIVED with its age,
  * though the API serves it with no readback path.
  *
- * A row is two lines. The first: the label and key, the device value large, the bounds bar (the allowed range, the
- * value, the next planned value as a hollow ring) and the one pill (redesign §4.4). The second, one `.meta` line: who
+ * A row is two lines. The first: the label and key, the device value large, its age (`SettingAgeLabel`, every row), the
+ * bounds bar (the allowed range, the value, the next planned value as a hollow ring) and the one pill (redesign §4.4). The second, one `.meta` line: who
  * wrote the value in force, what Iris plans next and, while a change is on its way, the request and its reason.
  */
 
@@ -154,12 +154,12 @@ function Elapsed({ at }: { at: string | null | undefined }) {
   if (!Number.isFinite(time)) return null;
   return <span className="age">{duration(Math.max(0, Math.floor((now - time) / 1000)))}</span>;
 }
-/** "2 min ago", ticking silently. */
-function Ago({ at }: { at: string | null | undefined }) {
+/** "2 min ago", ticking silently; `bare` leaves out the `.age` span, for a parent that is one. */
+function Ago({ at, bare = false }: { at: string | null | undefined; bare?: boolean }) {
   const now = useNow();
   const time = at ? Date.parse(at) : Number.NaN;
-  if (!Number.isFinite(time)) return <span className="age">{TIME_UNAVAILABLE}</span>;
-  return <span className="age">{duration(Math.max(0, Math.floor((now - time) / 1000)))} ago</span>;
+  const words = Number.isFinite(time) ? `${duration(Math.max(0, Math.floor((now - time) / 1000)))} ago` : TIME_UNAVAILABLE;
+  return bare ? <>{words}</> : <span className="age">{words}</span>;
 }
 /** A clock time, with its date when it is not today's (`today`, America/Denver). */
 function When({ at, today }: { at: string; today: string | null }) {
@@ -177,6 +177,42 @@ function Writer({ actor }: { actor: Actor }) {
 /** A plan's writer: Iris with AI, or the forecast action engine, "Forecast rule · system" and never AI. */
 function planWriter(source: string): ReactNode {
   return source === "preemptive" ? <span>Forecast rule · system</span> : <><span>Iris</span>{sep}<Mark kind="ai" /></>;
+}
+
+// ---------------------------------------------------------------------------------------------------- the setting's age
+/**
+ * How old the row's value is (Jason, 2026-11-07, #1132: an age on every row): `derived` for a Band in force row (its
+ * value's computed time), `reported` while the device reports a value (`readback.observed_at`, the time the drawer's
+ * "reported 2 min ago" counts from), else `changed` from the newest write in force (`lastWriteAt`: the desired row or
+ * the plan), else `unknown`. `at` is the ISO time the age counts from.
+ */
+export type SettingAge = { readonly kind: "derived" | "reported" | "changed"; readonly at: string } | { readonly kind: "unknown"; readonly at: null };
+export function settingAge(setting: Pick<Setting, "group" | "readback" | "desired" | "plan" | "applied_from">): SettingAge {
+  const observed = setting.readback?.observed_at;
+  const value = setting.readback?.value;
+  const parses = (at: string | null | undefined): at is string => typeof at === "string" && Number.isFinite(Date.parse(at));
+  if (value !== null && value !== undefined && Number.isFinite(value) && parses(observed)) {
+    return { kind: setting.group === "band_in_force" ? "derived" : "reported", at: observed };
+  }
+  const written = lastWriteAt(setting);
+  if (written !== null) return { kind: "changed", at: new Date(written).toISOString() };
+  return { kind: "unknown", at: null };
+}
+
+/**
+ * A row's age, beside its device value: "reported 2 min ago" as the drawer words it, "Last data 14 min ago (06:02)"
+ * under the STALE rule (readbacks stale, on a row that can be STALE: `AgeLabel`, as the drawer shows it), "changed 3 h
+ * ago" for a row the device does not report, "age unknown" when nothing dates it. A Band in force row with a value has its
+ * age in its value line ("Derived · 4 min ago"), so the row shows this label for every other row. Ticks silently.
+ */
+export function SettingAgeLabel({ setting, readbackStale = false }: { setting: Setting; readbackStale?: boolean }) {
+  const age = settingAge(setting);
+  if (age.kind === "unknown") return <span className="setting-age age" data-age="unknown">age unknown</span>;
+  const canBeStale = setting.group !== "band_in_force" && setting.readback_via !== "none";
+  if (age.kind === "reported" && readbackStale && canBeStale) {
+    return <span className="setting-age" data-age="stale"><AgeLabel observedAt={age.at} stale /></span>;
+  }
+  return <span className="setting-age age" data-age={age.kind}>{age.kind === "changed" ? "changed " : "reported "}<Ago at={age.at} bare /></span>;
 }
 
 // ---------------------------------------------------------------------------------------------------- the device value
@@ -211,7 +247,7 @@ export function DeviceLine({ setting, readbackStale = false, programRevision = n
   const text = age ? keptValueText(value, { ...setting, unit: settingUnit(setting) }) : settingDisplay(value, setting);
   if (band) {
     return <p className="setting-line setting-value" data-device="derived">
-      <span className="setting-device-value">{text}</span> <Mark kind="derived" />{sep}<Ago at={reading?.observed_at} />
+      <span className="setting-device-value">{text}</span> <Mark kind="derived" />{sep}<span className="setting-age age" data-age="derived"><Ago at={reading?.observed_at} bare /></span>
     </p>;
   }
   if (noReadback) return <p className="setting-line setting-value" data-device="no_readback"><span className="setting-device-value">{text}</span> <Mark kind="no_readback" /></p>;
@@ -391,7 +427,7 @@ export type SettingRowProps = DeviceProps & {
 
 /**
  * One setting (redesign §5.10): a table row of two lines at 1440 px, a stacked card at 860 px and below whose Edit (or
- * Details) link covers the row. Line one is the label and key, the device value large, the bounds bar and the one pill;
+ * Details) link covers the row. Line one is the label and key, the device value large with its age, the bounds bar and the one pill;
  * line two the meta line. An operator on a writable row gets Edit; everyone else Details, which opens the same drawer
  * read-only. Memoized: a poll re-renders only the rows whose data changed (TanStack Query keeps unchanged rows by
  * reference).
@@ -409,6 +445,7 @@ export const SettingRow = memo(function SettingRow({ setting, readbackStale = fa
     <td className="setting-device">
       <div className="ctl-row-line">
         <DeviceLine setting={setting} readbackStale={readbackStale} programRevision={programRevision} />
+        {settingAge(setting).kind !== "derived" && <SettingAgeLabel setting={setting} readbackStale={readbackStale} />}
         {numeric
           ? <BoundsBar min={setting.min} max={setting.max} step={setting.step} unit={setting.unit} value={setting.readback?.value} planned={plannedNext(setting)}
             requested={pending?.value ?? null} stale={readbackStale} />

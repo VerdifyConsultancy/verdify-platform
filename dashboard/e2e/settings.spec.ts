@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 // SCR-05 Settings (#1132, redesign §5.10): the catalog from the rendered registry fixture, the rail's filters in the URL
-// with their counts, each row's device value, bounds bar, one pill and meta line, a setting going REQUESTED → CONFIRMED
+// with their counts, each row's device value and age, bounds bar, one pill and meta line, a setting going REQUESTED → CONFIRMED
 // or NOT CONFIRMED, the refusal beside the field, Release, the site caps, read-only drawers, and the phone's selects.
 // #1139: the drawer's history with Revert, and a crop-band anchor's curve preview.
 import type { Page } from "@playwright/test";
@@ -24,6 +24,10 @@ test("one row per registry row; read-only rows show why and have no Edit; the ba
   await expect(row(page, "mister_engage_kpa").locator(".setting-label")).toHaveText("VPD Mister Engage");
   // The device value large, its bounds bar with the next plan's ring, and one meta line; no pill in the steady state.
   await expect(row(page, "mister_engage_kpa").locator(".setting-value")).toHaveText("1.60 kPa");
+  // Every row shows its age (Jason, 2026-11-07), worded as the drawer words it.
+  await expect(page.locator("tr.setting-row .setting-age")).toHaveCount(await page.locator("tr.setting-row").count());
+  await expect(row(page, "mister_engage_kpa").locator(".setting-age")).toHaveText(/^reported \d+ min ago$/);
+  await expect(row(page, "mister_engage_kpa").locator(".setting-age")).toBeVisible();
   await expect(row(page, "mister_engage_kpa").locator(".ctl-bounds-end")).toHaveText(["0.50", "2.50"]);
   await expect(row(page, "mister_engage_kpa").locator(".ctl-bounds-planned")).toHaveCount(1);
   await expect(row(page, "mister_engage_kpa").locator(".setting-next")).toHaveText("next 1.70 kPa at 13:00 · AI");
@@ -310,6 +314,10 @@ test("at 360 px Settings uses two selects, the rows stack as cards that open the
   // A row is a stacked card: no bounds bar, its value, pill and meta under its label, and its link at least 44 px.
   const engage = row(page, "mister_engage_kpa");
   await expect(engage.locator(".ctl-bounds")).toBeHidden();
+  // Every card shows its age beside its value at phone width too.
+  await expect(page.locator("tr.setting-row .setting-age")).toHaveCount(4);
+  await expect(engage.locator(".setting-age")).toBeVisible();
+  await expect(engage.locator(".setting-age")).toHaveText(/ ago$/);
   const [card, catalog] = await Promise.all([engage.boundingBox(), page.locator(".ctl-catalog").boundingBox()]);
   expect(Math.abs(card!.width - catalog!.width)).toBeLessThanOrEqual(2);
   expect((await engage.getByRole("link", { name: "Edit VPD Mister Engage" }).boundingBox())!.height).toBeGreaterThanOrEqual(44);

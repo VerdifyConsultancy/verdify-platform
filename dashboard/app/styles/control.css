@@ -63,6 +63,7 @@ a.ctl-rail-item:hover{background:var(--field);color:var(--leaf)}
 .setting-device-value{font-size:var(--fs-lg);font-weight:600;line-height:1.25;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
 .setting-value[data-device=program] .setting-device-value{font-size:var(--fs-md)}
 .ctl-row-line>.setting-value[data-device=derived]{flex:0 1 auto}
+.ctl-row-line>.setting-age{flex:0 0 9rem;min-width:0;font-size:var(--fs-sm);color:var(--muted);font-variant-numeric:tabular-nums}
 .ctl-row-pill:empty{display:none}
 .ctl-row-meta{margin:var(--space-1) 0 0;max-width:46rem}
 .ctl-row-meta .state-reason,.ctl-status-lines .state-reason{display:inline}
@@ -107,6 +108,7 @@ a.ctl-rail-item:hover{background:var(--field);color:var(--leaf)}
   .setting-param,.ctl-row-line>.ctl-bounds{display:none}
   .ctl-row-line{margin-top:var(--space-1)}
   .ctl-row-line>.setting-value{flex:0 1 auto}
+  .ctl-row-line>.setting-age{flex:0 1 auto}
   /* The row's one link covers the whole card, so a tap anywhere opens the drawer. */
   .ctl-row-link::after{content:"";position:absolute;inset:0}
   .ctl-find input,.ctl-search input{width:100%;flex:1 1 auto}
