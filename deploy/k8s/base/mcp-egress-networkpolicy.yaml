@@ -1,7 +1,7 @@
 # #1011: no direct Internet, LAN, NAS, device or API egress.
 # #1351: the only non-cluster destination is local Cortex (traefik-apps 192.168.7.10:443) for
-# embed.main. MCP needs no verdify-outbound relay port: Slack (8082) left with #1352 and the OpenAI
-# embeddings relay (8081) with #1351.
+# embed.main. MCP needs no verdify-outbound relay port: the chat relay (8082) left with #1352 and the
+# OpenAI embeddings relay (8081) with #1351.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:

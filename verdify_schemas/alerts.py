@@ -958,7 +958,7 @@ class IrrigationLineFaultedAlert(_AlertBase):
 
 
 class McpUnreachableDetails(_DetailsBase):
-    """The planning heartbeat's MCP Service probe (#1352): replaces its Slack-only page."""
+    """The planning heartbeat's MCP Service probe (#1352): replaces its former chat-only page."""
 
     url: str = Field(..., min_length=1)
     consecutive_failures: int = Field(..., ge=1)
@@ -970,7 +970,7 @@ class McpUnreachableAlert(_AlertBase):
 
 
 class ForecastActionAlertDetails(_DetailsBase):
-    """A fired forecast_action_rules row whose action is ``alert`` (#1352): replaces its Slack-only post."""
+    """A fired forecast_action_rules row whose action is ``alert`` (#1352): replaces its former chat-only post."""
 
     rule_id: int
     rule_name: str = Field(..., min_length=1)
@@ -1201,3 +1201,21 @@ class AlertAction(BaseModel):
     action: AlertActionKind
     alert_id: int | None = None  # ignored for list
     data: AlertAckPayload | AlertResolvePayload | None = None
+
+
+class AlertRunbookRow(BaseModel):
+    """A runbook row the dashboard renders under an alert (table ``slack_alert_runbooks`` until renamed, #1352)."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    id: int | None = None
+    greenhouse_id: str = "vallery"
+    alert_type: str
+    severity: str | None = None
+    title: str
+    summary: str
+    runbook_url: str | None = None
+    steps: list[str] = Field(default_factory=list)
+    is_active: bool = True
+    created_at: AwareDatetime | None = None
+    updated_at: AwareDatetime | None = None

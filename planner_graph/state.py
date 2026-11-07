@@ -98,7 +98,7 @@ class PlannerState(TypedDict, total=False):
     tunable_changes: dict[str, float]
     delivery_status: str
     readback_status: str
-    slack_report: dict[str, str | bool]
+    final_report: dict[str, str]
     terminal_status: str
     action_choice_reason: str
     proposal_decision_summary: str

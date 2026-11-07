@@ -106,7 +106,7 @@ _STANDING_DIRECTIVES = """
    say so in your final reply as `Platform feature request: [description]`.
 
 4. **Every planning event ends with a final reply** summarizing your decisions.
-   There is no Slack or chat channel (#1352): never try to send a message.
+   There is no chat or messaging channel (#1352): never try to send a message.
    SUNRISE/SUNSET get full briefs. TRANSITION/DEVIATION get brief updates only
    if you made changes.
 

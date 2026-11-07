@@ -494,7 +494,6 @@ Longhorn Engine/Replica/Snapshot/Volume/VolumeAttachment objects are generated b
 | verdify-prod | `verdify-operator-api` | agents KSOPS lane for verdify-prod ([agents#5993](https://github.com/jvallery/agents/issues/5993)) | cross-lane-legit |
 | verdify-prod | `verdify-planner-runtime-db` | agents KSOPS `verdify-prod-secrets-local-prod` | cross-lane-legit |
 | verdify-prod | `verdify-setpoint-server-runtime-db` | agents KSOPS `verdify-prod-secrets-local-prod` | cross-lane-legit |
-| verdify-prod | `verdify-slack` | agents KSOPS `verdify-prod-secrets-local-prod` | retiring (#1352): nothing mounts it; removal from the agents KSOPS lane and its estate row is the companion change |
 | verdify-prod | `verdify-vision-key` | out-of-band kubectl (no KSOPS source) | hand-applied-adopt |
 | verdify-prod | `verdify-vision-runtime-db` | agents KSOPS `verdify-prod-secrets-local-prod` | cross-lane-legit |
 | verdify-prod | `verdify-writer-watchdog-runtime-db` | agents KSOPS `verdify-prod-secrets-local-prod` | cross-lane-legit |
@@ -820,7 +819,7 @@ The product owns the longctx.mm vision client and CronJob reference to `verdify-
 
 ## Fixed outbound dependencies (#1011 / #1022)
 
-`verdify-outbound` Deployment/Service/ServiceAccount, `verdify-outbound-config` and `verdify-outbound-boundary` are product-owned in verdify-prod. They expose only fixed OpenAI embedding, Slack chat-post and Open-Meteo forecast paths; the ingestor and MCP have no direct Internet route after adoption. See [delivery and live acceptance](docs/runbooks/outbound-boundary.md). The writer's exact Shelly TCP/502 endpoint is the approved additional greenhouse-VLAN dependency. Production adoption is tracked in #1011/#1022; source and configuration-test success alone do not close either issue.
+`verdify-outbound` Deployment/Service/ServiceAccount, `verdify-outbound-config` and `verdify-outbound-boundary` are product-owned in verdify-prod. They expose only the fixed Open-Meteo forecast path (#1351, #1352); the ingestor and MCP have no direct Internet route after adoption. See [delivery and live acceptance](docs/runbooks/outbound-boundary.md). The writer's exact Shelly TCP/502 endpoint is the approved additional greenhouse-VLAN dependency. Production adoption is tracked in #1011/#1022; source and configuration-test success alone do not close either issue.
 
 ## Separate signed firmware build and flash (#1009)
 

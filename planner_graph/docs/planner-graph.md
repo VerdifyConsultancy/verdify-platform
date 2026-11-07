@@ -95,7 +95,7 @@ Core modules:
 - `planner_graph/server.py`
   - container entrypoint that binds to Cloud Run's `PORT`
 - `planner_graph/clients/`
-  - adapters for Verdify reads, OpenAI, MCP, Slack
+  - adapters for Verdify reads, OpenAI, MCP
 - `planner_graph/nodes/`
   - graph nodes
 - `Dockerfile`

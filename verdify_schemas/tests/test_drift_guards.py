@@ -25,9 +25,9 @@ from pathlib import Path
 import pytest
 
 from verdify_schemas.activity import ActivityLogRow, DesiredStateRow
-from verdify_schemas.alerts import AlertLogRow
+from verdify_schemas.alerts import AlertLogRow, AlertRunbookRow
 from verdify_schemas.crop_profiles import CropTargetProfile
-from verdify_schemas.crops import Crop, CropEvent, Observation
+from verdify_schemas.crops import Crop, CropEvent, CropTaskRow, Observation
 from verdify_schemas.daily import (
     ComplianceZoneWeightRow,
     DailySummaryRow,
@@ -55,16 +55,6 @@ from verdify_schemas.setpoint import (
     SetpointClamp,
     SetpointPlanRow,
     SetpointSnapshot,
-)
-from verdify_schemas.slack_ops import (
-    CropTaskRow,
-    SlackAIWorkItemRow,
-    SlackAlertActionRow,
-    SlackAlertRunbookRow,
-    SlackCommandAuditRow,
-    SlackConfirmationRequestRow,
-    SlackNotificationEventRow,
-    SlackUserRoleRow,
 )
 from verdify_schemas.system_infra import (
     DataGap,
@@ -242,15 +232,9 @@ DB_BACKED = [
     (SensorRegistry, "sensor_registry"),
     (ESP32LogRow, "esp32_logs"),
     (DataGap, "data_gaps"),
-    # Slack operations
-    (SlackUserRoleRow, "slack_user_roles"),
-    (SlackCommandAuditRow, "slack_command_audit"),
-    (SlackConfirmationRequestRow, "slack_confirmation_requests"),
-    (SlackAlertActionRow, "slack_alert_actions"),
-    (SlackNotificationEventRow, "slack_notification_events"),
+    # Operator rows: crop tasks and the dashboard's alert runbooks (table renamed in a later migration, #1352)
     (CropTaskRow, "crop_tasks"),
-    (SlackAlertRunbookRow, "slack_alert_runbooks"),
-    (SlackAIWorkItemRow, "slack_ai_work_items"),
+    (AlertRunbookRow, "slack_alert_runbooks"),
     # Migration 280 (VD-30): the dashboard's write record. Skips until 280 is in the DB it reads.
     (ActivityLogRow, "activity_log"),
     (DesiredStateRow, "desired_state"),

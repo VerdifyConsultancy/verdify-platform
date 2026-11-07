@@ -2,7 +2,7 @@
 
 Runs the owning leak read and envelope and _sync_monitor_alerts from
 ingestor/tasks/alerts.py (see alert_lifecycle_harness) against an in-memory
-alert_log, equipment_state flag and site meter. No database, Slack or device.
+alert_log, equipment_state flag and site meter. No database, network or device.
 """
 
 from __future__ import annotations

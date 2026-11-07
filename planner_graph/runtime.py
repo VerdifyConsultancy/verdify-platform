@@ -17,7 +17,6 @@ from planner_graph.config import AppSettings
 from planner_graph.clients.db import VerdifyReadClient
 from planner_graph.clients.mcp import MCPClient
 from planner_graph.clients.openai import OpenAIPlannerClient
-from planner_graph.clients.slack import SlackClient
 from planner_graph.memory import (
     DisabledMemoryStore,
     InMemoryMemoryStore,
@@ -288,7 +287,6 @@ class PlannerRuntime:
     db: VerdifyReadClient = field(default_factory=VerdifyReadClient)
     mcp: MCPClient = field(default_factory=MCPClient)
     openai: OpenAIPlannerClient = field(default_factory=OpenAIPlannerClient)
-    slack: SlackClient = field(default_factory=SlackClient)
     memory: PlannerMemoryStore = field(default_factory=DisabledMemoryStore)
     hooks: ExecutionHooks = field(default_factory=ExecutionHooks)
     planner_logger: PlannerLogger = field(default_factory=PlannerLogger)

@@ -330,7 +330,7 @@ def test_a_demoted_or_dry_run_engine_writes_no_plan_or_activity_row(db, engine, 
 
 
 def test_an_alert_rule_writes_one_dashboard_alert_that_refreshes_and_resolves(db, engine):
-    """#1352: a fired alert rule is one forecast_action_alert row (warning), never a Slack post."""
+    """#1352: a fired alert rule is one forecast_action_alert row (warning), never a chat post."""
 
     async def check():
         owner = await connect(db, OWNER)

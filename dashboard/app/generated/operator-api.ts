@@ -1082,7 +1082,7 @@ export interface components {
         readonly Alert: {
             /** Format: date-time */
             readonly acknowledged_at?: string | null;
-            /** @description Username, agent or Slack user */
+            /** @description Username or agent */
             readonly acknowledged_by?: string | null;
             /**
              * @example leak_detected
@@ -1117,7 +1117,7 @@ export interface components {
             /** Format: date-time */
             readonly resolved_at?: string | null;
             readonly resolved_by?: string | null;
-            /** @description Markdown from slack_alert_runbooks */
+            /** @description Markdown from the alert runbook table */
             readonly runbook?: string | null;
             /** @enum {string} */
             readonly severity: "critical" | "warning" | "info";

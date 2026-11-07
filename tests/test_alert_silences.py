@@ -2,7 +2,7 @@
 
 Runs the owning silence helpers, the soil scan and _sync_monitor_alerts from
 ingestor/tasks/alerts.py (see alert_lifecycle_harness) against an in-memory alert_log
-held to the ingestor login's grants. No database, Slack or device:
+held to the ingestor login's grants. No database, network or device:
 tests/test_dashboard_db_alert_silences.py runs the read and the close path on PostgreSQL.
 """
 
@@ -185,7 +185,7 @@ def test_a_silenced_alert_is_not_raised_and_its_open_row_closes_as_suppressed():
     ns = load_alert_lifecycle()
     morning = denver(11, 6, 7)
     log = AlertLog(morning)
-    row = log.seed(alert_type=DRYOUT[0], sensor_id=DRYOUT[1], zone="south", severity="critical", slack_ts="1790.1")
+    row = log.seed(alert_type=DRYOUT[0], sensor_id=DRYOUT[1], zone="south", severity="critical")
     result = sync(ns, log, morning, [dryout_alert()])
     assert result == {"new": 0, "escalated": 0, "resolved": 0, "suppressed": 1}
     assert log.of(*DRYOUT) == [row]  # nothing raised

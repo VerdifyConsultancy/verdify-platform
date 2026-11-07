@@ -136,7 +136,7 @@ test("who wrote, in text (R4): a person by name with dashboard, iris and an agen
   expect(actorWords({ source: "agent:steward", name: "steward" }, me)).toEqual({ text: "steward · agent", ai: true });
   expect(actorWords({ source: "system", name: "forecast-engine" }, me)).toEqual({ text: "forecast-engine · system", ai: false });
   expect(actorWords({ source: "agent:Bad Name", name: "x" }, me)).toEqual({ text: "x · agent:Bad Name", ai: false });
-  expect(actorWords({ source: "slack", name: "U123" }, me)).toEqual({ text: "U123 · slack", ai: false });
+  expect(actorWords({ source: "mqtt", name: "U123" }, me)).toEqual({ text: "U123 · mqtt", ai: false });
 });
 
 test("one line an entry: a setting's change with its facts, an Iris plan collapsed to its count, an automatic entry led by its cause", () => {

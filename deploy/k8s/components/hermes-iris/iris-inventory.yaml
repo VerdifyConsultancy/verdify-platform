@@ -346,7 +346,7 @@ data:
 
     ### REPORT: the final reply
 
-    Every event ends with a final reply; there is no Slack or chat channel (#1352),
+    Every event ends with a final reply; there is no chat or messaging channel (#1352),
     so never try to send a message. For SUNRISE, SUNSET, MIDNIGHT, and WEEKLY,
     persist the plan successfully before writing its brief.
 

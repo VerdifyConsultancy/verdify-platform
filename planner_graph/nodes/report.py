@@ -7,8 +7,6 @@ bookkeeping that marks a run as completed.
 
 from __future__ import annotations
 
-from typing import cast
-
 from planner_graph.nodes import copy_state
 from planner_graph.runtime import PlannerRuntime
 from planner_graph.state import PlannerState, utc_now
@@ -24,16 +22,13 @@ def build_report(runtime: PlannerRuntime):
             raise ValueError(
                 "report requires trigger_id, selected_action, and run_mode"
             )
-        report_payload = cast(
-            dict[str, str | bool],
-            runtime.slack.send_report(
-                trigger_id,
-                f"{selected_action} completed in {run_mode} mode",
-            ),
-        )
         next_state = copy_state(state)
         next_state["current_step"] = "report"
-        next_state["slack_report"] = report_payload
+        # The report is the run's terminal state; it is sent nowhere (#1352).
+        next_state["final_report"] = {
+            "trigger_id": trigger_id,
+            "summary": f"{selected_action} completed in {run_mode} mode",
+        }
         next_state["status"] = "completed"
         next_state["terminal_status"] = (
             "proposal_failed" if selected_action == "fail" else "proposal_ready"

@@ -18,7 +18,7 @@ Hermes is now the only production route for Iris planning cycles.
   and is bind-mounted as `/opt/data` in the container.
 - Runtime secrets — **not in git**. Live at `/etc/verdify/hermes-iris.env`
   and hold `OPENAI_API_KEY`, `VERDIFY_MCP_TOKEN`, `HERMES_IRIS_API_KEY`.
-  Slack is not a Verdify channel (#1352).
+  Verdify has no chat channel (#1352).
 
 ## Deployment
 

@@ -545,7 +545,6 @@ class AlertLog:
                     "alert_type": alert_type,
                     "severity": severity,
                     "sensor_id": sensor_id,
-                    "slack_ts": None,
                     "disposition": "open",
                     "resolved_at": None,
                     "message": message,
@@ -565,7 +564,7 @@ class AlertLog:
 @pytest.fixture
 def alert_log_only():
     """#1352: the monitor has no sender; alert_log is its only delivery."""
-    assert not hasattr(alerts, "_post_slack") and not hasattr(alerts, "_load_token")
+    assert not hasattr(alerts, "_load_token")
 
 
 async def _sync(log: AlertLog, stuck: dict | None, **kwargs) -> None:

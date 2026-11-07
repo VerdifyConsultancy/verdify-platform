@@ -2010,12 +2010,12 @@ components:
         last_seen_at: {type: [string, 'null'], format: date-time, description: Newest of the merged repeats}
         count: {type: integer, minimum: 1, description: Repeats of this alert_type and sensor_id merged into the row}
         acknowledged_at: {type: [string, 'null'], format: date-time}
-        acknowledged_by: {type: [string, 'null'], description: 'Username, agent or Slack user'}
+        acknowledged_by: {type: [string, 'null'], description: 'Username or agent'}
         notes: {type: [string, 'null']}
         resolved_at: {type: [string, 'null'], format: date-time}
         resolved_by: {type: [string, 'null']}
         resolution: {type: [string, 'null']}
-        runbook: {type: [string, 'null'], description: Markdown from slack_alert_runbooks}
+        runbook: {type: [string, 'null'], description: Markdown from the alert runbook table}
     AlertPage:
       allOf:
         - $ref: '#/components/schemas/Page'
